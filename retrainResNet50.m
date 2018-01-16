@@ -1,6 +1,6 @@
 %% Description
 %   Generate one MHI image for each video.
-function net = retrainAlexNet( trainingData, varargin )
+function net = retrainResNet50( trainingData, varargin )
 if ~mod( nargin, 2 )
     error( 'Variable arguments must be name and value pairs!' );
 end
@@ -34,10 +34,7 @@ for i=1:2:length(varargin)
             error( 'Invalid vararg pair!' );
     end
 end
-%% Fixed arguments
-IM_HEIGHT = 227;
-IM_WIDTH = 227;
-
+%% Fixed/other arguments
 numClasses = length(unique( trainingData.Labels ));
 %% Switches for converting flags to strings if needed
 % Set the flag to shuffle the data on each epoch. Unused: 'once'.
@@ -64,19 +61,27 @@ opts = trainingOptions( 'sgdm', ...
     'ExecutionEnvironment', GPU ...
     );
 %% Begin loading AlexNet, replace final classification layer
-alex = alexnet;
-layers = alex.Layers;
+net = resnet50;
+lgraph = layerGraph(net);
+lgraph = removeLayers(lgraph, {'fc1000','fc1000_softmax','ClassificationLayer_fc1000'});
+% Initialize the final FC layer as best we can
 myFCName = 'acc_fcout';
 finalFCLayer = fullyConnectedLayer(numClasses,'Name',myFCName);
-finalFCLayerInputSize = 4096;
+finalFCLayerInputSize = 2048;
 finalFCLayer.Weights = gpuArray(single(randn([numClasses finalFCLayerInputSize])*0.0001));
 finalFCLayer.Bias = gpuArray(single(randn([numClasses 1])*0.0001));
 finalFCLayer.WeightLearnRateFactor = 1;
 finalFCLayer.WeightL2Factor = 1;
 finalFCLayer.BiasLearnRateFactor = 1;
 finalFCLayer.BiasL2Factor = 0;
-layers(23) = finalFCLayer;
-layers(24) = softmaxLayer('Name','acc_fcout_softmax');
-layers(25) = classificationLayer('Name','acc_fcout_output');
+% Create the new layers
+newLayers = [
+    finalFCLayer;
+    softmaxLayer('Name','acc_fcout_softmax');
+    classificationLayer('Name','acc_fcout_output')];
+lgraph = addLayers(lgraph,newLayers);
+% Attach this to the layers
+connection_point = 'avg_pool';
+lgraph = connectLayers(lgraph,connection_point,myFCName);
 %% Training step
-net = trainNetwork(dataStore,layers,opts);
+net = trainNetwork(trainingData,lgraph,opts);
