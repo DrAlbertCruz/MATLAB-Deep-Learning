@@ -1,12 +1,12 @@
 %% Description
 %   Generate one MHI image for each video.
-function net = retrainAlexNet( trainingData, trainingLabels, varargin )
-if mod( nargin, 2 )
+function net = retrainAlexNet( trainingData, varargin )
+if ~mod( nargin, 2 )
     error( 'Variable arguments must be name and value pairs!' );
 end
 %% Default arguments
-EPOCH = 10;
-MINIBATCH_SIZE = 250;
+EPOCH = 5;
+MINIBATCH_SIZE = 100;
 INITIAL_LEARNING_RATE = 0.01;
 L2_REGULARIZATION = 0.0001;
 FLAG_SHUFFLE = true;
@@ -19,22 +19,26 @@ for i=1:2:length(varargin)
         case 'epoch'
             EPOCH = val_;
         case 'miniBatchSize'
-MINIBATCH_SIZE = 250;
+            MINIBATCH_SIZE = val_;
         case 'initialLearningRate'
-INITIAL_LEARNING_RATE = 0.01;
+            INITIAL_LEARNING_RATE = val_;
         case 'L2Regularization'
-L2_REGULARIZATION = 0.0001;
+            L2_REGULARIZATION = val_;
         case 'shuffle'
-FLAG_SHUFFLE = true;
+            FLAG_SHUFFLE = val_;
         case 'verbosity'
-VERBOSE_FREQUENCY = 10;
-        case 'verbosity'
-FLAG_GPU = true;
+            VERBOSE_FREQUENCY = val_;
+        case 'gpu'
+            FLAG_GPU = val_;
+        otherwise
+            error( 'Invalid vararg pair!' );
     end
 end
 %% Fixed arguments
 IM_HEIGHT = 227;
 IM_WIDTH = 227;
+
+numClasses = length(unique( trainingData.Labels ));
 %% Switches for converting flags to strings if needed
 % Set the flag to shuffle the data on each epoch. Unused: 'once'.
 if FLAG_SHUFFLE == true
@@ -59,12 +63,9 @@ opts = trainingOptions( 'sgdm', ...
     'Shuffle', SHUFFLE, ...
     'ExecutionEnvironment', GPU ...
     );
-
-% Set up a new set of layers with transferrance
-% Open pre-trained alexnet
+%% Begin loading AlexNet, replace final classification layer
 alex = alexnet;
 layers = alex.Layers;
-
 myFCName = 'acc_fcout';
 finalFCLayer = fullyConnectedLayer(numClasses,'Name',myFCName);
 finalFCLayerInputSize = 4096;
@@ -74,130 +75,8 @@ finalFCLayer.WeightLearnRateFactor = 1;
 finalFCLayer.WeightL2Factor = 1;
 finalFCLayer.BiasLearnRateFactor = 1;
 finalFCLayer.BiasL2Factor = 0;
-
 layers(23) = finalFCLayer;
 layers(24) = softmaxLayer('Name','acc_fcout_softmax');
 layers(25) = classificationLayer('Name','acc_fcout_output');
-
-clear convnet
-
-data_counter = 1;
-%% Load dataset
-disp( 'Doing dataset' );
-for vid=1:length(VIDEO)
-    for samp=1:SAMPLES_PER_VIDEO
-        % File name
-        filename_front = [ num2str(VIDEO(vid)), '.front.' num2str(samp) '.png' ];
-        filename_side = [ num2str(VIDEO(vid)), '.side.' num2str(samp) '.png' ];
-        
-        
-        % Create a new 4D image variable
-        if ~exist( 'data_front', 'var' )
-            % Image matrixes
-            data_front = single(zeros( IM_HEIGHT, IM_WIDTH, 3, NUM_SAMPLES ));
-            data_side = single(zeros( IM_HEIGHT, IM_WIDTH, 3, NUM_SAMPLES ));
-            
-            % Labels
-            init_labels = cell( 1,NUM_SAMPLES ); % Create a label vector as cells
-            [init_labels{:}] = deal( 'positive' ); % Broadcast 'control' as the default label
-            label = categorical( init_labels ); % Finally, set it in the labels vector
-            
-            % Video index
-            video_number = zeros( 1,NUM_SAMPLES );
-        end
-        
-        cd( DATA_DIR );
-        % Get front image if needed
-        if MODE == 0 || MODE == 2
-            im1 = readAndPreprocessImage( filename_front );
-            data_front(:,:,:,data_counter) = im1;
-        end
-        % Get side image if needed
-        if MODE > 0
-            im2 = readAndPreprocessImage( filename_side );
-            data_side(:,:,:,data_counter) = im2;
-        end
-        
-        % Set label
-        if VIDEO(vid) > 11
-            label(data_counter) = categorical({'control'});
-        end
-        
-        video_number(data_counter) = VIDEO(vid);
-        data_counter = data_counter + 1;
-    end
-end
-
-% We're doing so well we need to implement leave-one-video-out CV
-for fold=1:length(VIDEO)
-    tic
-    training_ind = video_number ~= VIDEO(fold);
-    testing_ind = ~training_ind;
-    testing_labels = label(testing_ind);
-    correct = testing_labels(1);
-    
-    switch MODE
-        case 0
-            disp( 'Setting up training and testing sets' );
-            trainingFeatures = data_front( :, :, :, training_ind);
-            testFeatures = data_front( :, :, :, testing_ind);
-        case 1
-            disp( 'Setting up training and testing sets for side' );
-            trainingFeatures = data_side( :, :, :, training_ind);
-            testFeatures = data_side( :, :, :, testing_ind);
-    end
-    
-    
-    % Train network
-    
-    disp( 'Classification step' );
-    net = trainNetwork(trainingFeatures,label(training_ind)',layers,opts);
-    predictedLabels = classify(net, testFeatures);
-    
-    
-    results(fold,1) = length( predictedLabels ); % p
-    results(fold,2) = 0; % n
-    results(fold,3) = sum( predictedLabels == label(testing_ind)' ); % tp
-    results(fold,4) = sum( predictedLabels ~= label(testing_ind)' ); % fn
-    t = toc;
-    if fold ~= length(VIDEO)
-        time_left = (length(VIDEO) - fold) * t / 60;
-    end
-    disp( [ 'Estimated ' num2str( time_left ) ' minutes left. ' ] );
-end
-
-cd( WORK_DIR );
-save( [ 'alexnet-final' num2str(now) '.mat' ], 'results' );
-end
-
-function [trainingFeatures, testFeatures] = innerGetActivations( convnet, data_front, featureLayer, training_ind, testing_ind )
-%% This is where we would retrain a neural network
-trainingFeatures = activations(convnet, data_front( :, :, :, training_ind), featureLayer, ...
-    'MiniBatchSize', 32, 'OutputAs', 'columns');
-% Extract test features using the CNN
-testFeatures = activations(convnet, data_front( :, :, :, testing_ind), featureLayer, 'MiniBatchSize',32);
-end
-
-%% Image datastore read function
-function Iout = readAndPreprocessImage(filename)
-global IM_HEIGHT IM_WIDTH
-
-I = imread(filename);
-
-% Some images may be grayscale. Replicate the image 3 times to
-% create an RGB image.
-if ismatrix(I)
-    I = cat(3,I,I,I);
-end
-
-% Maintain aspect ratio by removing edges
-% ASSUME THE IMAGES ARE wide
-clipToLength = fix( (size(I,2) - size(I,1))/2 );
-I = I( :, clipToLength:(size(I,2)-clipToLength), : );
-
-% Resize the image as required for the CNN.
-Iout = imresize(I, [227 227]);
-
-Iout = single(mat2gray( Iout ));
-
-end
+%% Training step
+net = trainNetwork(dataStore,layers,opts);

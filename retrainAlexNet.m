@@ -1,7 +1,7 @@
 %% Description
 %   Generate one MHI image for each video.
-function net = retrainAlexNet( trainingData, trainingLabels, varargin )
-if mod( nargin, 2 )
+function net = retrainAlexNet( trainingData, varargin )
+if ~mod( nargin, 2 )
     error( 'Variable arguments must be name and value pairs!' );
 end
 %% Default arguments
@@ -34,9 +34,8 @@ for i=1:2:length(varargin)
             error( 'Invalid vararg pair!' );
     end
 end
-%% Fixed arguments
-IM_HEIGHT = 227;
-IM_WIDTH = 227;
+%% Fixed/other arguments
+numClasses = length(unique( trainingData.Labels ));
 %% Switches for converting flags to strings if needed
 % Set the flag to shuffle the data on each epoch. Unused: 'once'.
 if FLAG_SHUFFLE == true
@@ -64,7 +63,6 @@ opts = trainingOptions( 'sgdm', ...
 %% Begin loading AlexNet, replace final classification layer
 alex = alexnet;
 layers = alex.Layers;
-% TODO: Infer number of classes
 myFCName = 'acc_fcout';
 finalFCLayer = fullyConnectedLayer(numClasses,'Name',myFCName);
 finalFCLayerInputSize = 4096;
@@ -78,4 +76,4 @@ layers(23) = finalFCLayer;
 layers(24) = softmaxLayer('Name','acc_fcout_softmax');
 layers(25) = classificationLayer('Name','acc_fcout_output');
 %% Training step
-net = trainNetwork(trainingData,trainingLabels,layers,opts);
+net = trainNetwork(trainingData,layers,opts);
