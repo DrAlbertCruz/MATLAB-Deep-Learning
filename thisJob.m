@@ -1,3 +1,6 @@
-t_italyGrapesGoogLeNet;
-t_italyGrapesProjectVgg;
-t_italyGrapesProject;
+try
+    t_italyGrapesProjectVgg( 19:60 );
+catch e
+    t_mailtest();
+    e
+end
