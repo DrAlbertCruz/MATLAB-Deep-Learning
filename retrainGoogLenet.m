@@ -70,10 +70,10 @@ finalFCLayer = fullyConnectedLayer(numClasses,'Name',myFCName);
 finalFCLayerInputSize = 1024;
 finalFCLayer.Weights = gpuArray(single(randn([numClasses finalFCLayerInputSize])*0.0001));
 finalFCLayer.Bias = gpuArray(single(randn([numClasses 1])*0.0001));
-finalFCLayer.WeightLearnRateFactor = 1;
+finalFCLayer.WeightLearnRateFactor = 5;
 finalFCLayer.WeightL2Factor = 1;
-finalFCLayer.BiasLearnRateFactor = 1;
-finalFCLayer.BiasL2Factor = 0;
+finalFCLayer.BiasLearnRateFactor = 5;
+finalFCLayer.BiasL2Factor = 1;
 % Create the new layers
 newLayers = [
     finalFCLayer;
