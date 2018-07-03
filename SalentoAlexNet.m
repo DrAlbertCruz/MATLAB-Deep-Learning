@@ -1,5 +1,10 @@
-function t_italyGrapesProjectAlexNet( PARAM_LIMIT_IN )
-DATA_LOCATION = 'C:\Vitis-Vinifera-Data-2017\localized';
+function SalentoAlexNet( PARAM_LIMIT_IN )
+if nargin==0
+    PARAM_LIMIT_IN = 1:1;
+end
+clc
+DATA_LOCATION = '~/data/Salento-Grapevine-Yellows-Dataset/raw';
+SAVE_LOCATION = '~/MATLAB-Deep-Learning/Salento1/';
 
 disp( 'Getting data ready' ), tic;
 images = imageDatastore(DATA_LOCATION,...
@@ -25,8 +30,10 @@ for PARAM_LIMIT = PARAM_LIMIT_IN
         results(fold).groundTruth = validationImages.Labels;
         results(fold).time = toc;
     end
-    save( [ 't_epochVal' num2str(PARAM_LIMIT) '.mat'], 'results' );
-    t_mailtest( [ 'VICTORY JOB SCHEDULER: AlexNet done with epoch ' num2str( PARAM_LIMIT ) ], 'VICTORY JOB SCHEDULER: Progress notification' );
+    
+    save( fullfile( SAVE_LOCATION, ...
+                    [ 'AlexNet_e' num2str(PARAM_LIMIT) '.mat'] ), ...
+                    'results' );
 end
 end
 
@@ -34,8 +41,7 @@ function net = trainAFold( images, PARAM_LIMIT )
 % Training the net
 disp( 'Training the network' );
 net = retrainAlexNet( images, ...
-    'epoch', PARAM_LIMIT, ...
-    'miniBatchSize', 150 );
+    'epoch', PARAM_LIMIT );
 end
 
 function Iout = readAndPreprocessImage(filename)
@@ -58,6 +64,6 @@ end
 Iout = imresize(I, [227 227]);
 
 % Typecast into single [0,1]
-Iout = single(mat2gray(Iout));
+%Iout = single(mat2gray(Iout));
 
 end
