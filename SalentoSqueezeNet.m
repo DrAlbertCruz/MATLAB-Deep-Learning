@@ -3,7 +3,7 @@ if nargin==0
     PARAM_LIMIT_IN = 1:40;
 end
 clc
-DATA_LOCATION = '~/data/Salento-Grapevine-Yellows-Dataset/localized';
+DATA_LOCATION = '~/data/Salento-Grapevine-Yellows-Dataset/raw';
 SAVE_LOCATION = '~/MATLAB-Deep-Learning/Salento1/';
 
 disp( 'Getting data ready' ), tic;
@@ -11,7 +11,7 @@ images = imageDatastore(DATA_LOCATION,...
     'IncludeSubfolders',true,...
     'LabelSource','foldernames');
 disp( 'Full dataset' );
-images.ReadFcn = @(filename)readAndPreprocessImage(filename);
+images.ReadFcn = @(filename)innerReadAndPreprocessImage(filename);
 tbl = countEachLabel( images );
 minSetCount = min(tbl{:,2});
 % Images are the original set
@@ -47,7 +47,7 @@ net = retrainSqueezeNet( images, ...
 toc;
 end
 
-function Iout = readAndPreprocessImage(filename)
+function Iout = innerReadAndPreprocessImage(filename)
 I = imread(filename);
 % Some images may be grayscale. Replicate the image 3 times to
 % create an RGB image.
@@ -57,5 +57,5 @@ end
 % Resize the image as required for the CNN.
 Iout = imresize(I, [227 227]);
 % Typecast into single [0,1]
-Iout = single(mat2gray(Iout));
+%Iout = single(Iout) ./ 255;
 end

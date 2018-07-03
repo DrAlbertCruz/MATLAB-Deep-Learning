@@ -3,7 +3,7 @@ if nargin==0
     PARAM_LIMIT_IN = 1:40;
 end
 clc
-DATA_LOCATION = '~/data/Salento-Grapevine-Yellows-Dataset/localized';
+DATA_LOCATION = '~/data/Salento-Grapevine-Yellows-Dataset/raw';
 SAVE_LOCATION = '~/MATLAB-Deep-Learning/Salento1/';
 
 disp( 'Getting data ready' ), tic;
@@ -50,25 +50,14 @@ toc;
 end
 
 function Iout = readAndPreprocessImage(filename)
-
 I = imread(filename);
-
 % Some images may be grayscale. Replicate the image 3 times to
 % create an RGB image.
 if ismatrix(I)
     I = cat(3,I,I,I);
 end
-
-% % From the top
-% % Maintain aspect ratio by clipping from the bottom
-% if size(I,1) > size(I,2)
-%     I = I( 1:size(I,2), :, : );
-% end
-
 % Resize the image as required for the CNN.
 Iout = imresize(I, [224 224]);
-
 % Typecast into single [0,1]
-Iout = single(mat2gray(Iout));
-
+%Iout = single(Iout) ./ 255;
 end
