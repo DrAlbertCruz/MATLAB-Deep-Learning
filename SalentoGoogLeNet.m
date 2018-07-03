@@ -1,6 +1,10 @@
-function t_italyGrapesGoogLeNet( PARAM_LIMIT_IN )
+function SalentoGoogLeNet( PARAM_LIMIT_IN )
+if nargin==0
+    PARAM_LIMIT_IN = 1:40;
+end
 clc
-DATA_LOCATION = 'C:\Vitis-Vinifera-Data-2017\localized';
+DATA_LOCATION = '~/data/Salento-Grapevine-Yellows-Dataset/localized';
+SAVE_LOCATION = '~/MATLAB-Deep-Learning/Salento1/';
 
 disp( 'Getting data ready' ), tic;
 images = imageDatastore(DATA_LOCATION,...
@@ -26,8 +30,10 @@ for PARAM_LIMIT = PARAM_LIMIT_IN
         results(fold).groundTruth = validationImages.Labels;
         results(fold).time = toc;
     end
-    save( [ 't_GoogLeNet_epochVal' num2str(PARAM_LIMIT) '.mat'], 'results' );
-    t_mailtest( [ 'VICTORY JOB SCHEDULER: GoogLeNet done with epoch ' num2str( PARAM_LIMIT ) ], 'VICTORY JOB SCHEDULER: Progress notification' );
+    
+    save( fullfile( SAVE_LOCATION, ...
+                    [ 'GoogLeNet_e' num2str(PARAM_LIMIT) '.mat'] ), ...
+                    'results' );
 end
 
 end
@@ -37,8 +43,7 @@ function net = trainAFold( images, PARAM_LIMIT )
 disp( 'Training the network' ), tic;
 gpuDevice(1);
 net = retrainGoogLenet( images, ...
-    'epoch', PARAM_LIMIT, ...
-    'miniBatchSize', 125 );
+    'epoch', PARAM_LIMIT );
 % Doesnt work: 150
 % Does work: 50
 toc;

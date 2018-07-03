@@ -1,12 +1,10 @@
-%% Description
-%   Generate one MHI image for each video.
 function net = retrainGoogLenet( trainingData, varargin )
 if ~mod( nargin, 2 )
     error( 'Variable arguments must be name and value pairs!' );
 end
 %% Default arguments
 EPOCH = 5;
-MINIBATCH_SIZE = 100;
+MINIBATCH_SIZE = 64;
 INITIAL_LEARNING_RATE = 0.01;
 L2_REGULARIZATION = 0.0001;
 FLAG_SHUFFLE = true;
@@ -50,7 +48,7 @@ else
     GPU = 'cpu';
 end
 %% Set training options
-opts = trainingOptions( 'sgdm', ...
+opts = trainingOptions( 'adam', ...
     'InitialLearnRate', INITIAL_LEARNING_RATE, ...
     'L2Regularization', L2_REGULARIZATION, ...
     'MaxEpochs', EPOCH, ...
@@ -73,7 +71,7 @@ finalFCLayer.Bias = gpuArray(single(randn([numClasses 1])*0.0001));
 finalFCLayer.WeightLearnRateFactor = 5;
 finalFCLayer.WeightL2Factor = 1;
 finalFCLayer.BiasLearnRateFactor = 5;
-finalFCLayer.BiasL2Factor = 1;
+finalFCLayer.BiasL2Factor = 0;
 % Create the new layers
 newLayers = [
     finalFCLayer;

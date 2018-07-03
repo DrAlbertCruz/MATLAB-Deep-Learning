@@ -1,7 +1,10 @@
-function t_italyGrapesProjectResNet50
-PARAM_LIMIT_IN = 1:50
+function SalentoSqueezeNet( PARAM_LIMIT_IN )
+if nargin==0
+    PARAM_LIMIT_IN = 1:40;
+end
 clc
-DATA_LOCATION = '~/data/Salento-Grapevine-Yellows-Dataset/';
+DATA_LOCATION = '~/data/Salento-Grapevine-Yellows-Dataset/localized';
+SAVE_LOCATION = '~/MATLAB-Deep-Learning/Salento1/';
 
 disp( 'Getting data ready' ), tic;
 images = imageDatastore(DATA_LOCATION,...
@@ -15,7 +18,7 @@ minSetCount = min(tbl{:,2});
 [images,~] = splitEachLabel(images,minSetCount,'randomized');
 
 for PARAM_LIMIT = PARAM_LIMIT_IN
-    results(1).fold_results = [];
+    results(1).fold_results = ([]);
     for fold = 1:5
         tic;
         [trainingImages,validationImages] = splitEachLabel(images,0.7,'randomized');
@@ -27,7 +30,10 @@ for PARAM_LIMIT = PARAM_LIMIT_IN
         results(fold).groundTruth = validationImages.Labels;
         results(fold).time = toc;
     end
-    save( [ '/home/acruz/MATLAB-Deep-Learning/Salento-July/resnet50_e' num2str(PARAM_LIMIT) '.mat'], 'results' );
+    
+    save( fullfile( SAVE_LOCATION, ...
+                    [ 'SqueezeNet_e' num2str(PARAM_LIMIT) '.mat'] ), ...
+                    'results' );
 end
 
 end
@@ -36,26 +42,20 @@ function net = trainAFold( images, PARAM_LIMIT )
 % Training the net
 disp( 'Training the network' ), tic;
 gpuDevice(1);
-net = retrainResNet50( images, ...
-    'epoch', PARAM_LIMIT, ...
-    'miniBatchSize', 25 );
+net = retrainSqueezeNet( images, ...
+    'epoch', PARAM_LIMIT );
 toc;
 end
 
 function Iout = readAndPreprocessImage(filename)
-
 I = imread(filename);
-
 % Some images may be grayscale. Replicate the image 3 times to
 % create an RGB image.
 if ismatrix(I)
     I = cat(3,I,I,I);
 end
-
 % Resize the image as required for the CNN.
-Iout = imresize(I, [224 224]);
-
+Iout = imresize(I, [227 227]);
 % Typecast into single [0,1]
 Iout = single(mat2gray(Iout));
-
 end
