@@ -1,4 +1,5 @@
 function SalentoSqueezeNet( PARAM_LIMIT_IN )
+load default
 if nargin==0
     PARAM_LIMIT_IN = 1:40;
 end
@@ -14,14 +15,13 @@ disp( 'Full dataset' );
 images.ReadFcn = @(filename)innerReadAndPreprocessImage(filename);
 tbl = countEachLabel( images );
 minSetCount = min(tbl{:,2});
-% Images are the original set
-[images,~] = splitEachLabel(images,minSetCount,'randomized');
 
 for PARAM_LIMIT = PARAM_LIMIT_IN
+    [imagesInner,~] = splitEachLabel(images,minSetCount,'randomized');
     results(1).fold_results = ([]);
-    for fold = 1:5
+    for fold = 1:default.FOLDS
         tic;
-        [trainingImages,validationImages] = splitEachLabel(images,0.7,'randomized');
+        [trainingImages,validationImages] = splitEachLabel(imagesInner,0.7,'randomized');
         net = trainAFold( trainingImages, PARAM_LIMIT );
         predictedLabels = classify(net,validationImages);
         results(fold).fold_results = sum(predictedLabels == validationImages.Labels) ...
@@ -57,5 +57,5 @@ end
 % Resize the image as required for the CNN.
 Iout = imresize(I, [227 227]);
 % Typecast into single [0,1]
-%Iout = single(Iout) ./ 255;
+Iout = single(Iout)./255;
 end
