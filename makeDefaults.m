@@ -10,7 +10,7 @@ default.msgNumArgs = 'This function requires one or more arguments; the training
 
 %% Default values
 default.EPOCH = 5;                          % Epoch limit for training
-default.MINIBATCH_SIZE = 64;                % Mini-batch on each it.
+default.MINIBATCH_SIZE = 10;                % Mini-batch on each it.
 default.INITIAL_LEARNING_RATE = 0.001;       % Learning rate
 default.L2_REGULARIZATION = 0.0001;         % Regularization
 default.FLAG_SHUFFLE = true;                % Shuffle the samples on epoch
@@ -20,9 +20,9 @@ default.FLAG_GPU = true;                    % Whether or not to use the GPU
 default.optimizer = 'sgdm';                 % Training method used in training options
 
 % Parameters for final fully connected layer used in classification
-default.WeightLearnRateFactor = 3;
+default.WeightLearnRateFactor = 20;
 default.WeightL2Factor = 1;
-default.BiasLearnRateFactor = 3;
+default.BiasLearnRateFactor = 20;
 default.BiasL2Factor = 0;
 
 default.FOLDS = 3;
