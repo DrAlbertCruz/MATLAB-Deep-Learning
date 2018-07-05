@@ -1,7 +1,7 @@
 %% retrainVgg16.m
 %   A function to load a pre-trained VGG-16 CNN and retrain it on a given
 %   dataset.
-function net = retrainVgg16( trainingData, varargin )
+function net = retrainVgg19( trainingData, varargin )
 load default                                            % Load defaults
 numClasses = length(unique( trainingData.Labels ));     % Num classes
 %% Input validation
@@ -63,19 +63,12 @@ opts = trainingOptions( default.optimizer, ...
     'ExecutionEnvironment', GPU ...
     );
 %% Begin loading AlexNet, replace final classification layer
-alex = vgg16;
+alex = vgg19;
 layers = alex.Layers;
 myFCName = 'acc_fcout';
-finalFCLayer = fullyConnectedLayer(numClasses,'Name',myFCName);
-finalFCLayerInputSize = 4096;
-finalFCLayer.Weights = gpuArray(single(randn([numClasses finalFCLayerInputSize])*0.0001));
-finalFCLayer.Bias = gpuArray(single(randn([numClasses 1])*0.0001));
-finalFCLayer.WeightLearnRateFactor = default.WeightLearnRateFactor;
-finalFCLayer.WeightL2Factor = default.WeightL2Factor;
-finalFCLayer.BiasLearnRateFactor = default.BiasLearnRateFactor;
-finalFCLayer.BiasL2Factor = default.BiasL2Factor;
-layers(39) = finalFCLayer;
-layers(40) = softmaxLayer('Name','acc_fcout_softmax');
-layers(41) = classificationLayer('Name','acc_fcout_output');
+layers_ =  getFinalFCLayer( 4096, myFCName, GPU, numClasses );
+layers(39) = layers_(1);
+layers(40) = layers_(2);
+layers(41) = layers_(3);
 %% Training step
 net = trainNetwork(trainingData,layers,opts);

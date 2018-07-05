@@ -1,18 +1,26 @@
-function SalentoAlexNet2( PARAM_LIMIT_IN )
+%% retrainDeepLearner
+% Inputs:
+%   1) Epoch range to iterate over
+%   2) Input data folder
+%   3) Output mat folder
+%   4) Save file prefix
+function retrainDeepLearner( PARAM_LIMIT_IN, ... Epoch range to it. over
+                             DATA_LOCATION, ... Input data folder
+                             SAVE_LOCATION, ... Save location
+                             SAVE_PREFIX, ... Prefix for mat file
+                             F, ... Function pointer to the deep learner
+                             N ) % The size required by the deep learner
 load default
-if nargin==0
-    PARAM_LIMIT_IN = 1:40;
-end
 clc
-DATA_LOCATION = 'D:\Salento-Grapevine-Yellows-Dataset\raw';
-SAVE_LOCATION = 'D:\MATLAB-Deep-Learning\Salento2';
+%DATA_LOCATION = '~/data/Salento-Grapevine-Yellows-Dataset/raw';
+%SAVE_LOCATION = '~/MATLAB-Deep-Learning/Salento1/';
 
 disp( 'Getting data ready' ), tic;
 images = imageDatastore(DATA_LOCATION,...
     'IncludeSubfolders',true,...
     'LabelSource','foldernames');
 disp( 'Full dataset' );
-images.ReadFcn = @(filename)readAndPreprocessImage(filename);
+images.ReadFcn = @(filename)readAndPreprocessImage(filename, N);
 tbl = countEachLabel( images );
 minSetCount = min(tbl{:,2});
 % Images are the original set
@@ -23,7 +31,7 @@ for PARAM_LIMIT = PARAM_LIMIT_IN
     for fold = 1:default.FOLDS
         tic;
         [trainingImages,validationImages] = splitEachLabel(imagesInner,0.7,'randomized');
-        net = trainAFold( trainingImages, PARAM_LIMIT );
+        net = trainAFold( F, trainingImages, PARAM_LIMIT );
         predictedLabels = classify(net,validationImages);
         results(fold).fold_results = sum(predictedLabels == validationImages.Labels) ...
             / length(predictedLabels);
@@ -33,38 +41,15 @@ for PARAM_LIMIT = PARAM_LIMIT_IN
     end
     
     save( fullfile( SAVE_LOCATION, ...
-                    [ 'AlexNet_e' num2str(PARAM_LIMIT) '.mat'] ), ...
+                    [ SAVE_PREFIX num2str(PARAM_LIMIT) '.mat'] ), ...
                     'results' );
 end
 end
 
-function net = trainAFold( images, PARAM_LIMIT )
+function net = trainAFold( F, images, PARAM_LIMIT )
 % Training the net
 disp( 'Training the network' );
-net = frozenAlexNet( images, ...
-    'epoch', PARAM_LIMIT );
-end
-
-function Iout = readAndPreprocessImage(filename)
-
-I = imread(filename);
-
-% Some images may be grayscale. Replicate the image 3 times to
-% create an RGB image.
-if ismatrix(I)
-    I = cat(3,I,I,I);
-end
-
-% % From the top
-% % Maintain aspect ratio by clipping from the bottom
-% if size(I,1) > size(I,2)
-%     I = I( 1:size(I,2), :, : );
-% end
-
-% Resize the image as required for the CNN.
-Iout = imresize(I, [227 227]);
-
-% Typecast into single [0,1]
-Iout = single(Iout)./255;
-
+net = feval( F, images, 'epoch', PARAM_LIMIT );
+%net = retrainAlexNet( images, ...
+%    'epoch', PARAM_LIMIT );
 end

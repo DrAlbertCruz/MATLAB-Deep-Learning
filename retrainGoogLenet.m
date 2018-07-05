@@ -61,26 +61,19 @@ opts = trainingOptions( default.optimizer, ...
     );
 %% Begin loading AlexNet, replace final classification layer
 net = googlenet;
-lgraph = layerGraph(net);
+lgraph = layerGraph(net); % Generate lgraph from net
+% Remove the classification layers
 lgraph = removeLayers(lgraph, {'loss3-classifier','prob','output'});
-% Initialize the final FC layer as best we can
-myFCName = 'acc_fcout';
-finalFCLayer = fullyConnectedLayer(numClasses,'Name',myFCName);
-finalFCLayerInputSize = 1024;
-finalFCLayer.Weights = gpuArray(single(randn([numClasses finalFCLayerInputSize])*0.0001));
-finalFCLayer.Bias = gpuArray(single(randn([numClasses 1])*0.0001));
-finalFCLayer.WeightLearnRateFactor = default.WeightLearnRateFactor;
-finalFCLayer.WeightL2Factor = default.WeightL2Factor;
-finalFCLayer.BiasLearnRateFactor = default.BiasLearnRateFactor;
-finalFCLayer.BiasL2Factor = default.BiasL2Factor;
-% Create the new layers
-newLayers = [
-    finalFCLayer;
-    softmaxLayer('Name','acc_fcout_softmax');
-    classificationLayer('Name','acc_fcout_output')];
-lgraph = addLayers(lgraph,newLayers);
-% Attach this to the layers
+myFCName = 'acc_fcout'; % Name of the FC, fuse point with pretrained net
+layers =  getFinalFCLayer( 1024, myFCName, GPU, numClasses );
+lgraph = addLayers(lgraph,layers); % Add the layers to the graph
 connection_point = 'pool5-drop_7x7_s1';
-lgraph = connectLayers(lgraph,connection_point,myFCName);
+lgraph = connectLayers(lgraph,connection_point,myFCName); % Join
+%% Weight freezing step
+layers = lgraph.Layers;
+connections = lgraph.Connections;
+endOfNet = 141;
+layers(1:endOfNet) = freezeWeights(layers(1:endOfNet));
+lgraph = createLgraphUsingConnections(layers,connections);
 %% Training step
 net = trainNetwork(trainingData,lgraph,opts);

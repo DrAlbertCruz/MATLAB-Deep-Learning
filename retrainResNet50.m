@@ -1,17 +1,18 @@
-%% Description
-%   Generate one MHI image for each video.
 function net = retrainResNet50( trainingData, varargin )
+load default                                            % Load defaults
+numClasses = length(unique( trainingData.Labels ));     % Num classes
+%% Input validation
 if ~mod( nargin, 2 )
-    error( 'Variable arguments must be name and value pairs!' );
+    error( default.msgNumArgs );
 end
 %% Default arguments
-EPOCH = 5;
-MINIBATCH_SIZE = 100;
-INITIAL_LEARNING_RATE = 0.01;
-L2_REGULARIZATION = 0.0001;
-FLAG_SHUFFLE = true;
-VERBOSE_FREQUENCY = 10;
-FLAG_GPU = true;
+EPOCH = default.EPOCH;
+MINIBATCH_SIZE = default.MINIBATCH_SIZE;
+INITIAL_LEARNING_RATE = default.INITIAL_LEARNING_RATE;
+L2_REGULARIZATION = default.L2_REGULARIZATION;
+FLAG_SHUFFLE = default.FLAG_SHUFFLE;
+VERBOSE_FREQUENCY = default.VERBOSE_FREQUENCY;
+FLAG_GPU = default.FLAG_GPU;
 for i=1:2:length(varargin)
     arg_ = cell2mat(varargin(i));
     val_ = cell2mat(varargin(i+1));
@@ -34,8 +35,6 @@ for i=1:2:length(varargin)
             error( 'Invalid vararg pair!' );
     end
 end
-%% Fixed/other arguments
-numClasses = length(unique( trainingData.Labels ));
 %% Switches for converting flags to strings if needed
 % Set the flag to shuffle the data on each epoch. Unused: 'once'.
 if FLAG_SHUFFLE == true
@@ -50,7 +49,7 @@ else
     GPU = 'cpu';
 end
 %% Set training options
-opts = trainingOptions( 'sgdm', ...
+opts = trainingOptions( default.optimizer, ...
     'InitialLearnRate', INITIAL_LEARNING_RATE, ...
     'L2Regularization', L2_REGULARIZATION, ...
     'MaxEpochs', EPOCH, ...
@@ -64,24 +63,16 @@ opts = trainingOptions( 'sgdm', ...
 net = resnet50;
 lgraph = layerGraph(net);
 lgraph = removeLayers(lgraph, {'fc1000','fc1000_softmax','ClassificationLayer_fc1000'});
-% Initialize the final FC layer as best we can
-myFCName = 'acc_fcout';
-finalFCLayer = fullyConnectedLayer(numClasses,'Name',myFCName);
-finalFCLayerInputSize = 2048;
-finalFCLayer.Weights = gpuArray(single(randn([numClasses finalFCLayerInputSize])*0.0001));
-finalFCLayer.Bias = gpuArray(single(randn([numClasses 1])*0.0001));
-finalFCLayer.WeightLearnRateFactor = 1;
-finalFCLayer.WeightL2Factor = 1;
-finalFCLayer.BiasLearnRateFactor = 1;
-finalFCLayer.BiasL2Factor = 0;
-% Create the new layers
-newLayers = [
-    finalFCLayer;
-    softmaxLayer('Name','acc_fcout_softmax');
-    classificationLayer('Name','acc_fcout_output')];
-lgraph = addLayers(lgraph,newLayers);
-% Attach this to the layers
+myFCName = 'acc_fcout'; % Name of the FC, fuse point with pretrained net
+layers =  getFinalFCLayer( 2048, myFCName, GPU, numClasses );
+lgraph = addLayers(lgraph,layers); % Add the layers to the graph
 connection_point = 'avg_pool';
-lgraph = connectLayers(lgraph,connection_point,myFCName);
+lgraph = connectLayers(lgraph,connection_point,myFCName); % Join
+%% Weight freezing step
+layers = lgraph.Layers;
+connections = lgraph.Connections;
+endOfNet = 174;
+layers(1:endOfNet) = freezeWeights(layers(1:endOfNet));
+lgraph = createLgraphUsingConnections(layers,connections);
 %% Training step
 net = trainNetwork(trainingData,lgraph,opts);

@@ -7,7 +7,7 @@ finalFCLayer = fullyConnectedLayer(numClasses,'Name',myFCName);
 finalFCLayerInputSize = inputSize;
 if ~GPU
     finalFCLayer.Weights = single(randn([numClasses finalFCLayerInputSize])*0.0001);
-    finalFCLayer.Bias = single(randn([numClasses 1])*0.0001);
+    finalFCLayer.Bias = randn([numClasses 1])*0.0001;
 else
     finalFCLayer.Weights = gpuArray(single(randn([numClasses finalFCLayerInputSize])*0.0001));
     finalFCLayer.Bias = gpuArray(single(randn([numClasses 1])*0.0001));

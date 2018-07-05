@@ -1,6 +1,4 @@
-%% frozenAlexNet
-%   Retrain AlexNet, but freeze some of the initial layers
-function net = frozenAlexNet( trainingData, varargin )
+function net = retrainResNet101( trainingData, varargin )
 load default                                            % Load defaults
 numClasses = length(unique( trainingData.Labels ));     % Num classes
 %% Input validation
@@ -14,7 +12,7 @@ INITIAL_LEARNING_RATE = default.INITIAL_LEARNING_RATE;
 L2_REGULARIZATION = default.L2_REGULARIZATION;
 FLAG_SHUFFLE = default.FLAG_SHUFFLE;
 VERBOSE_FREQUENCY = default.VERBOSE_FREQUENCY;
-FLAG_GPU = false;   % 7/4 Fix this when using on Bender
+FLAG_GPU = default.FLAG_GPU;
 for i=1:2:length(varargin)
     arg_ = cell2mat(varargin(i));
     val_ = cell2mat(varargin(i+1));
@@ -61,27 +59,20 @@ opts = trainingOptions( default.optimizer, ...
     'Shuffle', SHUFFLE, ...
     'ExecutionEnvironment', GPU ...
     );
-%% Replace final classification layer
-alex = alexnet;
-layers = alex.Layers;
-myFCName = 'acc_fcout';
-% The following code will 'freeze' the network by setting the learning rate
-% factor to 0.
-% Conv layers: 2, 6, 10, 12, 14
-% FC layers: 17, 20
-% Classification: 23
-for layer = [2, 6, 10, 12, 14, 17, 20]
-        layers(layer).WeightLearnRateFactor = 0;
-        layers(layer).WeightL2Factor = 0;
-        layers(layer).BiasLearnRateFactor = 0;
-        layers(layer).BiasL2Factor = 0;
-end
-% Output of FC at 20 is 4096. Use function getFinalFCLayer to get the final
-% set of classification layers
-newlayers = getFinalFCLayer( 4096, myFCName, FLAG_GPU, numClasses );
-% The following code replaces the layers in the old network
-layers(23) = newlayers(1);
-layers(24) = newlayers(2);
-layers(25) = newlayers(3);
+%% Begin loading AlexNet, replace final classification layer
+net = resnet101;
+lgraph = layerGraph(net);
+lgraph = removeLayers(lgraph, {'fc1000','prob','ClassificationLayer_predictions'});
+myFCName = 'acc_fcout'; % Name of the FC, fuse point with pretrained net
+layers =  getFinalFCLayer( 2048, myFCName, GPU, numClasses );
+lgraph = addLayers(lgraph,layers); % Add the layers to the graph
+connection_point = 'pool5';
+lgraph = connectLayers(lgraph,connection_point,myFCName); % Join
+%% Weight freezing step
+layers = lgraph.Layers;
+connections = lgraph.Connections;
+endOfNet = 344;
+layers(1:endOfNet) = freezeWeights(layers(1:endOfNet));
+lgraph = createLgraphUsingConnections(layers,connections);
 %% Training step
-net = trainNetwork(trainingData,layers,opts);
+net = trainNetwork(trainingData,lgraph,opts);

@@ -1,4 +1,4 @@
-function net = retrainAlexNet( trainingData, varargin )
+function net = retrainInceptionResnetV2( trainingData, varargin )
 load default                                            % Load defaults
 numClasses = length(unique( trainingData.Labels ));     % Num classes
 %% Input validation
@@ -60,19 +60,19 @@ opts = trainingOptions( default.optimizer, ...
     'ExecutionEnvironment', GPU ...
     );
 %% Begin loading AlexNet, replace final classification layer
-alex = alexnet;
-layers = alex.Layers;
-myFCName = 'acc_fcout';
-finalFCLayer = fullyConnectedLayer(numClasses,'Name',myFCName);
-finalFCLayerInputSize = 4096;
-finalFCLayer.Weights = gpuArray(single(randn([numClasses finalFCLayerInputSize])*0.0001));
-finalFCLayer.Bias = gpuArray(single(randn([numClasses 1])*0.0001));
-finalFCLayer.WeightLearnRateFactor = default.WeightLearnRateFactor;
-finalFCLayer.WeightL2Factor = default.WeightL2Factor;
-finalFCLayer.BiasLearnRateFactor = default.BiasLearnRateFactor;
-finalFCLayer.BiasL2Factor = default.BiasL2Factor;
-layers(23) = finalFCLayer;
-layers(24) = softmaxLayer('Name','acc_fcout_softmax');
-layers(25) = classificationLayer('Name','acc_fcout_output');
+net = inceptionresnetv2;
+lgraph = layerGraph(net);
+lgraph = removeLayers(lgraph, {'predictions','predictions_softmax','ClassificationLayer_predictions'});
+myFCName = 'acc_fcout'; % Name of the FC, fuse point with pretrained net
+layers =  getFinalFCLayer( 1536, myFCName, GPU, numClasses );
+lgraph = addLayers(lgraph,layers); % Add the layers to the graph
+connection_point = 'avg_pool';
+lgraph = connectLayers(lgraph,connection_point,myFCName); % Join
+%% Weight freezing step
+layers = lgraph.Layers;
+connections = lgraph.Connections;
+endOfNet = 822;
+layers(1:endOfNet) = freezeWeights(layers(1:endOfNet));
+lgraph = createLgraphUsingConnections(layers,connections);
 %% Training step
-net = trainNetwork(trainingData,layers,opts);
+net = trainNetwork(trainingData,lgraph,opts);

@@ -60,25 +60,19 @@ opts = trainingOptions( default.optimizer, ...
     'ExecutionEnvironment', GPU ...
     );
 %% Begin loading AlexNet, replace final classification layer
-net = squeezenet;
-lgraph = layerGraph(net);
+net = squeezenet; % Get Squeeze
+lgraph = layerGraph(net); % Generate lgraph from net
+% Remove the last few classification layers
 lgraph = removeLayers(lgraph, {'prob','ClassificationLayer_predictions'});
-% Initialize the final FC layer as best we can
-myFCName = 'acc_fcout';
-finalFCLayer = fullyConnectedLayer(numClasses,'Name',myFCName);
-finalFCLayerInputSize = 1000; % Output of pool10 in SqueezeNet is 1x1x1000
-finalFCLayer.Weights = gpuArray(single(randn([numClasses finalFCLayerInputSize])*0.0001));
-finalFCLayer.Bias = gpuArray(single(randn([numClasses 1])*0.0001));
-finalFCLayer.WeightLearnRateFactor = default.WeightLearnRateFactor;
-finalFCLayer.WeightL2Factor = default.WeightL2Factor;
-finalFCLayer.BiasLearnRateFactor = default.BiasLearnRateFactor;
-finalFCLayer.BiasL2Factor = default.BiasL2Factor;
-% Create the new layers
-newLayers = [
-    finalFCLayer;
-    softmaxLayer('Name','acc_fcout_softmax');
-    classificationLayer('Name','acc_fcout_output')];
-lgraph = addLayers(lgraph,newLayers);
-lgraph = connectLayers(lgraph,'pool10',myFCName);
+myFCName = 'acc_fcout'; % Name of the FC, fuse point with pretrained net
+layers =  getFinalFCLayer( 1000, myFCName, GPU, numClasses );
+lgraph = addLayers(lgraph,layers); % Add the layers to the graph
+lgraph = connectLayers(lgraph,'pool10',myFCName); % Join
+%% Weight freezing step
+layers = lgraph.Layers;
+connections = lgraph.Connections;
+endOfNet = 66;
+layers(1:endOfNet) = freezeWeights(layers(1:endOfNet));
+lgraph = createLgraphUsingConnections(layers,connections);
 %% Training step
 net = trainNetwork(trainingData,lgraph,opts);
