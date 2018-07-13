@@ -1,3 +1,1 @@
 Results in raw images from the Salento dataset. Used raw, unaligned unsegmented images. NN IS frozen.
-
-Prior to 7/4 this was abandonned. do not use these results

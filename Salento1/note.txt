@@ -1,3 +1,1 @@
-This folder contains deep learning results for the Salento dataset.
-
-Results do not include data augmentation.
+Results in raw images from the Salento dataset. Used raw, unaligned unsegmented images. NN was not frozen.

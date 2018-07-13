@@ -1,0 +1,5 @@
+Results in raw images from the Salento dataset. 
+
+Raw images were augmented by translation and rotation. They were not centered or segmented/cropped.
+
+NN IS frozen.
