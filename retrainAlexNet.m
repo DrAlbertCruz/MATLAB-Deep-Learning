@@ -13,6 +13,15 @@ L2_REGULARIZATION = default.L2_REGULARIZATION;
 FLAG_SHUFFLE = default.FLAG_SHUFFLE;
 VERBOSE_FREQUENCY = default.VERBOSE_FREQUENCY;
 FLAG_GPU = default.FLAG_GPU;
+
+% Freezing the network. Freeze values:
+%   0 - Do not freeze. Let all layers train.
+%   1 - Partial freeze. Freeze the front layers according to literature and
+%   let the back layers train.
+%   2 - Full freeze. Freeze everything except for the FC layer we're adding
+%   to the end for classification.
+FREEZE_MODE = default.FREEZE_MODE;
+
 for i=1:2:length(varargin)
     arg_ = cell2mat(varargin(i));
     val_ = cell2mat(varargin(i+1));
@@ -31,10 +40,13 @@ for i=1:2:length(varargin)
             VERBOSE_FREQUENCY = val_;
         case 'gpu'
             FLAG_GPU = val_;
+        case 'freeze' % Freeze mode
+            FREEZE_MODE = val_;
         otherwise
             error( 'Invalid vararg pair!' );
     end
 end
+
 %% Switches for converting flags to strings if needed
 % Set the flag to shuffle the data on each epoch. Unused: 'once'.
 if FLAG_SHUFFLE == true
@@ -48,6 +60,7 @@ if FLAG_GPU == true
 else
     GPU = 'cpu';
 end
+
 %% Set training options
 opts = trainingOptions( default.optimizer, ...
     'InitialLearnRate', INITIAL_LEARNING_RATE, ...
@@ -59,22 +72,28 @@ opts = trainingOptions( default.optimizer, ...
     'Shuffle', SHUFFLE, ...
     'ExecutionEnvironment', GPU ...
     );
+
 %% Begin loading AlexNet, replace final classification layer
 alex = alexnet;
 layers = alex.Layers;
 myFCName = 'acc_fcout';
-finalFCLayer = fullyConnectedLayer(numClasses,'Name',myFCName);
-finalFCLayerInputSize = 4096;
-finalFCLayer.Weights = gpuArray(single(randn([numClasses finalFCLayerInputSize])*0.0001));
-finalFCLayer.Bias = gpuArray(single(randn([numClasses 1])*0.0001));
-finalFCLayer.WeightLearnRateFactor = default.WeightLearnRateFactor;
-finalFCLayer.WeightL2Factor = default.WeightL2Factor;
-finalFCLayer.BiasLearnRateFactor = default.BiasLearnRateFactor;
-finalFCLayer.BiasL2Factor = default.BiasL2Factor;
+newLayers = getFinalFCLayer( 4096, myFCName, GPU, numClasses );
+% Remove the last few layers
+layers(23:25) = [];
+% Add the new layers
+layers = [layers; newLayers];
+
+%% Code to freeze parts of the network
 endOfNet = 22;
-layers(1:endOfNet) = freezeWeights(layers(1:endOfNet));
-layers(23) = finalFCLayer;
-layers(24) = softmaxLayer('Name','acc_fcout_softmax');
-layers(25) = classificationLayer('Name','acc_fcout_output');
+netMidpoint = 16;
+frontLayers = 1:netMidpoint;
+endLayers = (netMidpoint+1):endOfNet;
+if FREEZE_MODE > 0
+    layers(frontLayers) = freezeWeights(layers(frontLayers));
+end
+if FREEZE_MODE > 1
+    layers(endLayers) = freezeWeights(endLayers);
+end
+
 %% Training step
 net = trainNetwork(trainingData,layers,opts);

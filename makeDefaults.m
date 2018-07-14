@@ -15,7 +15,8 @@ default.INITIAL_LEARNING_RATE = 0.001;      % Learning rate
 default.L2_REGULARIZATION = 0.0001;         % Regularization
 default.FLAG_SHUFFLE = false;               % Shuffle the samples on epoch
 default.VERBOSE_FREQUENCY = 10;             % Number of iterations to display by default
-default.FLAG_GPU = true;                    % Whether or not to use the GPU
+default.FLAG_GPU = false;                   % Whether or not to use the GPU
+default.FREEZE_MODE = 2;                    % Amount of freezing
 
 default.optimizer = 'sgdm';                 % Training method used in training options
 

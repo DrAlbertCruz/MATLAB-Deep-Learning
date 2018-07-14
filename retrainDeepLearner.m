@@ -10,10 +10,8 @@ function retrainDeepLearner( PARAM_LIMIT_IN, ... Epoch range to it. over
                              SAVE_PREFIX, ... Prefix for mat file
                              F, ... Function pointer to the deep learner
                              N ) % The size required by the deep learner
+% Load default values
 load default
-clc
-%DATA_LOCATION = '~/data/Salento-Grapevine-Yellows-Dataset/raw';
-%SAVE_LOCATION = '~/MATLAB-Deep-Learning/Salento1/';
 
 disp( 'Getting data ready' ), tic;
 images = imageDatastore(DATA_LOCATION,...
