@@ -1,0 +1,2 @@
+Fully frozen NN
+Augmented: Segmented, centered, translated, rotated
