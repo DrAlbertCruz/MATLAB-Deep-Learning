@@ -1,0 +1,2 @@
+Augmentation: Centered, segmented, translated, rotated
+Frozen: Network is fully frozen
