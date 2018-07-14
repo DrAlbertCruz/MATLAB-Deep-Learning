@@ -1,7 +1,8 @@
 %% getFinalFCLayer
 %   Get the output layer of the network. Creates a fully-connected layer
 %   followed by a softmax activation and a classification layer.
-function layers =  getFinalFCLayer( inputSize, myFCName, GPU, numClasses )
+function layers =  getFinalFCLayer( inputSize, ...
+    myFCName, GPU, numClasses )
 load default
 finalFCLayer = fullyConnectedLayer(numClasses,'Name',myFCName);
 finalFCLayerInputSize = inputSize;
