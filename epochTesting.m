@@ -1,54 +1,24 @@
-clear all
-
 DATA_LOCATION = 'C:\data\Salento-Grapevine-Yellows-Dataset\localized';
 SAVE_LOCATION = 'localized3\';
+FOLDS = 5;
 
-for netArch = { 'alexnet', 'resnet50', 'resnet101', 'googlenet' }
-    for epochLimit = 1:5
-        disp( [ cell2mat( netArch ), ': Starting simulation ', num2str(epochLimit) ] );
-        
-        SAVE_PREFIX = [ cell2mat(netArch), '_fullfrozen_e_', num2str(epochLimit) ];
-        
-        if strcmp( cell2mat(netArch), 'alexnet' )
-            N = 227;
-        else
-            N = 224; % Size of image
-        end
-        
-        % Load default values
-        load default
-        
-        images = imageDatastore(DATA_LOCATION,...
-            'IncludeSubfolders',true,...
-            'LabelSource','foldernames');
-        
-        % Set image read function
-        images.ReadFcn = @(filename)readAndPreprocessImage(filename, N);
-        
-        % Randomly create a dataset with equal priors
-        tbl = countEachLabel( images );
-        minSetCount = min(tbl{:,2});
-        [imagesInner,~] = splitEachLabel(images,minSetCount,'randomized');
-        
-        tic;
-        [trainingImages,validationImages] = splitEachLabel(imagesInner,0.7,'randomized');
-        
-        % Train the network
-        net = trainDeepLearner( trainingImages, ...
-            'epoch', epochLimit, ...
-            'network', cell2mat(netArch), ...
-            'miniBatchSize', 20, ...
-            'freeze', 2 );
-        
-        predictedLabels = classify(net,validationImages);
-        
-        results(epochLimit).fold_results = sum(predictedLabels == validationImages.Labels) ...
-            / length(predictedLabels);
-        results(epochLimit).prediction = predictedLabels;
-        results(epochLimit).groundTruth = validationImages.Labels;
-        results(epochLimit).time = toc;
-    end
-    
-    save( fullfile( SAVE_LOCATION, [ SAVE_PREFIX, '.mat' ] ), ...
-        'results' );
-end
+crossValidate( DATA_LOCATION, SAVE_LOCATION, 'alexnet_frozen_e1', 'alexnet', FOLDS, 1 );
+crossValidate( DATA_LOCATION, SAVE_LOCATION, 'alexnet_frozen_e2', 'alexnet', FOLDS, 2 );
+crossValidate( DATA_LOCATION, SAVE_LOCATION, 'alexnet_frozen_e3', 'alexnet', FOLDS, 3 );
+crossValidate( DATA_LOCATION, SAVE_LOCATION, 'alexnet_frozen_e4', 'alexnet', FOLDS, 4 );
+crossValidate( DATA_LOCATION, SAVE_LOCATION, 'alexnet_frozen_e5', 'alexnet', FOLDS, 5 );
+crossValidate( DATA_LOCATION, SAVE_LOCATION, 'resnet50_frozen_e1', 'resnet50', FOLDS, 1 );
+crossValidate( DATA_LOCATION, SAVE_LOCATION, 'resnet50_frozen_e2', 'resnet50', FOLDS, 2 );
+crossValidate( DATA_LOCATION, SAVE_LOCATION, 'resnet50_frozen_e3', 'resnet50', FOLDS, 3 );
+crossValidate( DATA_LOCATION, SAVE_LOCATION, 'resnet50_frozen_e4', 'resnet50', FOLDS, 4 );
+crossValidate( DATA_LOCATION, SAVE_LOCATION, 'resnet50_frozen_e5', 'resnet50', FOLDS, 5 );
+crossValidate( DATA_LOCATION, SAVE_LOCATION, 'resnet101_frozen_e1', 'resnet101', FOLDS, 1 );
+crossValidate( DATA_LOCATION, SAVE_LOCATION, 'resnet101_frozen_e2', 'resnet101', FOLDS, 2 );
+crossValidate( DATA_LOCATION, SAVE_LOCATION, 'resnet101_frozen_e3', 'resnet101', FOLDS, 3 );
+crossValidate( DATA_LOCATION, SAVE_LOCATION, 'resnet101_frozen_e4', 'resnet101', FOLDS, 4 );
+crossValidate( DATA_LOCATION, SAVE_LOCATION, 'resnet101_frozen_e5', 'resnet101', FOLDS, 5 );
+crossValidate( DATA_LOCATION, SAVE_LOCATION, 'googlenet_frozen_e1', 'googlenet', FOLDS, 1 );
+crossValidate( DATA_LOCATION, SAVE_LOCATION, 'googlenet_frozen_e2', 'googlenet', FOLDS, 2 );
+crossValidate( DATA_LOCATION, SAVE_LOCATION, 'googlenet_frozen_e3', 'googlenet', FOLDS, 3 );
+crossValidate( DATA_LOCATION, SAVE_LOCATION, 'googlenet_frozen_e4', 'googlenet', FOLDS, 4 );
+crossValidate( DATA_LOCATION, SAVE_LOCATION, 'googlenet_frozen_e5', 'googlenet', FOLDS, 5 );
