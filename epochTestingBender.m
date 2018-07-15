@@ -1,4 +1,4 @@
-clear all
+----------------------clear all
 close all
 clc
 
@@ -9,10 +9,10 @@ FOLDS = 5;
 % Resnet101 jobs have to be done sequentially because of how much memory
 % they take up
 crossValidate( DATA_LOCATION, SAVE_LOCATION, 'resnet101_frozen_e1', 'resnet101', FOLDS, 1, true );
-crossValidate( DATA_LOCATION, SAVE_LOCATION, 'resnet101_frozen_e1', 'resnet101', FOLDS, 2, true );
-crossValidate( DATA_LOCATION, SAVE_LOCATION, 'resnet101_frozen_e1', 'resnet101', FOLDS, 3, true );
-crossValidate( DATA_LOCATION, SAVE_LOCATION, 'resnet101_frozen_e1', 'resnet101', FOLDS, 4, true );
-crossValidate( DATA_LOCATION, SAVE_LOCATION, 'resnet101_frozen_e1', 'resnet101', FOLDS, 5, true );
+crossValidate( DATA_LOCATION, SAVE_LOCATION, 'resnet101_frozen_e2', 'resnet101', FOLDS, 2, true );
+crossValidate( DATA_LOCATION, SAVE_LOCATION, 'resnet101_frozen_e3', 'resnet101', FOLDS, 3, true );
+crossValidate( DATA_LOCATION, SAVE_LOCATION, 'resnet101_frozen_e4', 'resnet101', FOLDS, 4, true );
+crossValidate( DATA_LOCATION, SAVE_LOCATION, 'resnet101_frozen_e5', 'resnet101', FOLDS, 5, true );
 
 try
     delete(gcp)
