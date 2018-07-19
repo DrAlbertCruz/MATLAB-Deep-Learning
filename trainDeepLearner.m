@@ -13,7 +13,16 @@
 %
 %   'network'
 %   Specify the neural network architecture. Valid architectures are:
-%   'alexnet' (default), 'googlenet', 'resnet50', 'resnet101'
+%   'alexnet' (default), 'googlenet', 'resnet50', 'resnet101',
+%   'squeezenet', 'inceptionv3'
+%   
+%   'freeze'
+%   Freezing the network. Freeze values:
+%   0 - Do not freeze. Let all layers train.
+%   1 - Partial freeze. Freeze the front layers according to literature and
+%   let the back layers train.
+%   2 - Full freeze. Freeze everything except for the FC layer we're adding
+%   to the end for classification. This is default.
 
 function net = trainDeepLearner( trainingData, varargin )
 load default                                            % Load defaults
@@ -31,18 +40,12 @@ L2_REGULARIZATION = 0.0001;
 FLAG_SHUFFLE = true;
 VERBOSE_FREQUENCY = 1;
 FLAG_GPU = true;
+OPTIMIZER = 'sgdm';
+FREEZE_MODE = 2;
+
 % Make sure these two are correct. Alexnet is not a DAG.
 NETWORK = 'alexnet';
 IS_DAG = false;
-OPTIMIZER = 'sgdm';
-
-% Freezing the network. Freeze values:
-%   0 - Do not freeze. Let all layers train.
-%   1 - Partial freeze. Freeze the front layers according to literature and
-%   let the back layers train.
-%   2 - Full freeze. Freeze everything except for the FC layer we're adding
-%   to the end for classification.
-FREEZE_MODE = default.FREEZE_MODE;
 
 %% VARARGIN SWITCH
 for i=1:2:length(varargin)
@@ -90,7 +93,9 @@ end
 % Recurrent nets need to set 'is_dag'
 if strcmp( NETWORK, 'googlenet' ) || ...
         strcmp( NETWORK, 'resnet50' ) || ...
-        strcmp( NETWORK, 'resnet101' )
+        strcmp( NETWORK, 'resnet101' ) || ...
+        strcmp( NETWORK, 'inceptionv3' ) || ...
+        strcmp( NETWORK, 'squeezenet' )
     IS_DAG = true;
 end
 
@@ -164,8 +169,40 @@ elseif strcmp( NETWORK, 'resnet101' )
     % resnet101 this is approximately up to the 7th module (not inclusive
     % of res4b_18)
     netMidpoint = 269;
-    % There are 174 non-output layers in the network
     endOfNet = 344;
+elseif strcmp( NETWORK, 'squeezenet' )
+    net = squeezenet;
+    lgraph = layerGraph(net);
+    clear squeezenet
+    % Remove the classification layers. Squeeze has this property where the
+    % pool10 output has the right number of outputs to be the prediction
+    % for ImageNet. We will have to insert our own FC layer at this end
+    % point
+    lgraph = removeLayers(lgraph, {'prob','ClassificationLayer_predictions'});
+    newLayers =  getFinalFCLayer( 1000, myFCName, GPU, numClasses );
+    lgraph = addLayers(lgraph,newLayers); % Add the layers to the graph
+    connection_point = 'pool10';
+    % For a partial freeze, we freeze up to 80% of the network. For
+    % squeezenet this roughly corresponds to the Fire7 module
+    netMidpoint = 48;
+    endOfNet = 66;
+elseif strcmp( NETWORK, 'inceptionv3' )
+    net = inceptionv3;
+    lgraph = layerGraph(net);
+    clear squeezenet
+    % Remove the classification layers. Squeeze has this property where the
+    % pool10 output has the right number of outputs to be the prediction
+    % for ImageNet. We will have to insert our own FC layer at this end
+    % point
+    lgraph = removeLayers(lgraph, {'predictions','predictions_softmax','ClassificationLayer_predictions'});
+    newLayers =  getFinalFCLayer( 2048, myFCName, GPU, numClasses );
+    lgraph = addLayers(lgraph,newLayers); % Add the layers to the graph
+    connection_point = 'avg_pool';
+    % For the other nets I tried to have the midpoint as 80% through the
+    % network. But looking at this thing, It's hard to say. I call the
+    % midpoint at 'mixed8'
+    netMidpoint = 250;
+    endOfNet = 313;
 end
 
 %% CODE TO FREEZE A PART OF THE NETWORK

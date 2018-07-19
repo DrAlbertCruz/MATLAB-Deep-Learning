@@ -7,8 +7,10 @@ function crossValidate( DATA_LOCATION, ... Location to load images from
     USE_GPU ) % Whether or not to use the GPU 
 
 %% INITIALIZATION PARAMS
-if strcmp( NET_ARCH, 'alexnet' )
+if strcmp( NET_ARCH, 'alexnet' ) || strcmp( NET_ARCH, 'squeezenet' )
     N = 227;
+elseif strcmp( NET_ARCH, 'inceptionv3' )
+    N = 299;
 else
     N = 224; % Size of image
 end
