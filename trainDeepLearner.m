@@ -15,6 +15,9 @@
 %   Specify the neural network architecture. Valid architectures are:
 %   'alexnet' (default), 'googlenet', 'resnet50', 'resnet101',
 %   'squeezenet', 'inceptionv3'
+%
+%   Added 6/4/2019:
+%   'vgg16', 'vgg19', 'inceptionresnetv2'
 %   
 %   'freeze'
 %   Freezing the network. Freeze values:
@@ -92,6 +95,7 @@ else
 end
 % Recurrent nets need to set 'is_dag'
 if strcmp( NETWORK, 'googlenet' ) || ...
+        strcmp( NETWORK, 'inceptionresnetv2' ) || ...
         strcmp( NETWORK, 'resnet50' ) || ...
         strcmp( NETWORK, 'resnet101' ) || ...
         strcmp( NETWORK, 'inceptionv3' ) || ...
@@ -126,6 +130,37 @@ if strcmp( NETWORK, 'alexnet' )
     % Midpoint is the start of the FC layers
     netMidpoint = 16;
     endOfNet = 22;
+% VGG 16. Added 6/4/2019. 
+elseif strcmp( NETWORK, 'vgg16' )
+    % Load network
+    net = vgg16;
+    layers = net.Layers;
+    clear net
+    % Structure network
+    newLayers = getFinalFCLayer( 4096, myFCName, GPU, numClasses );
+    layers(39:41) = []; % Remove the last few layers
+    layers = [layers; newLayers]; % Add the new layers
+    clear newLayers
+    % Midpoint is the start of the FC layers
+    netMidpoint = 32;
+    endOfNet = 38;
+% Inception Resnet V2. Added 6/4/2019. 
+% TODO: Calculate the midpoint of network based on literature. Currently we
+% set midpoint to the end of the network.
+elseif strcmp( NETWORK, 'inceptionresnetv2' )
+    net = inceptionresnetv2;
+    lgraph = layerGraph(net);
+    clear net
+    % Remove the classification layers
+    lgraph = removeLayers(lgraph, {'predictions','predictions_softmax','ClassificationLayer_predictions'});
+    % Structure network
+    newLayers =  getFinalFCLayer( 1536, myFCName, GPU, numClasses );
+    lgraph = addLayers(lgraph,newLayers); % Add the layers to the graph
+    clear newLayers
+    connection_point = 'avg_pool'; % Name of connection point
+    % Set the connection point to the last average pooling layer
+    netMidpoint = 822;
+    endOfNet = 822;
 elseif strcmp( NETWORK, 'googlenet' )
     % Load network
     net = googlenet;

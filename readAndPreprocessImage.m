@@ -8,5 +8,5 @@ end
 % Resize the image as required for the CNN.
 Iout = imresize(I, [N N]);
 % Typecast into single [0,1]
-Iout = single(Iout);
+Iout = double(Iout);
 end
