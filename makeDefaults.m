@@ -10,7 +10,7 @@ default.msgNumArgs = 'This function requires one or more arguments; the training
 
 %% Default values
 default.EPOCH = 5;                          % Epoch limit for training
-default.MINIBATCH_SIZE = 10;                % Mini-batch on each it.
+default.MINIBATCH_SIZE = 10;     .001           % Mini-batch on each it.
 default.INITIAL_LEARNING_RATE = 0.001;      % Learning rate
 default.L2_REGULARIZATION = 0.0001;         % Regularization
 default.FLAG_SHUFFLE = true;                % Shuffle the samples on epoch
